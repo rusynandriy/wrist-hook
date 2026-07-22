@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.type.watch" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="true" />
+
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@android:style/Theme.DeviceDefault">
+
+        <uses-library
+            android:name="com.google.android.wearable"
+            android:required="false" />
+
+        <!-- Standalone app: works without a paired phone (LTE/wifi). -->
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- One-tap tile: shows a Record button that launches straight into recording. -->
+        <service
+            android:name=".tile.QuickNoteTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_mic"
+            android:label="@string/app_name"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/tile_preview" />
+        </service>
+
+        <!-- Watch-face complication that launches straight into recording. -->
+        <service
+            android:name=".complication.QuickNoteComplicationService"
+            android:exported="true"
+            android:icon="@drawable/ic_mic"
+            android:label="@string/app_name"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SHORT_TEXT,MONOCHROMATIC_IMAGE" />
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="0" />
+        </service>
+
+        <!-- Convenience: set the webhook URL over adb (SET_WEBHOOK broadcast with an
+             "url" string extra; see README). Exported, so any on-watch app could also
+             set it. Acceptable for v1. -->
+        <receiver
+            android:name=".SetWebhookReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.rusyn.quicknote.SET_WEBHOOK" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

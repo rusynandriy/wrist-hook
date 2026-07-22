@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">QuickNote</string>
+
+    <string name="status_loading">QuickNote…</string>
+    <string name="status_sending">Sending…</string>
+    <string name="status_sent">Sent</string>
+    <string name="status_failed">Send failed</string>
+    <string name="status_cancelled">Cancelled</string>
+
+    <string name="hint_tap_to_send">Tap to stop &amp; send\nHold to cancel</string>
+
+    <string name="action_record_again">Record again</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_discard">Discard</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_done">Done</string>
+    <string name="action_close">Close</string>
+    <string name="action_send_now">Send now</string>
+    <string name="action_allow_mic">Allow microphone</string>
+
+    <string name="status_pending_send">Sending…</string>
+    <string name="hint_pending_send">Tap to send now\nHold to cancel</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_hint_url_required">Paste your Discord webhook URL to continue</string>
+    <string name="label_webhook_url">Webhook URL</string>
+    <string name="label_auth_header">Auth header</string>
+    <string name="label_pair_code">Pair with code</string>
+    <string name="value_pair_hint">Get a code at andriy.lol/pair</string>
+    <string name="label_auto_stop">Auto-stop on silence</string>
+    <string name="value_on">On</string>
+    <string name="value_off">Off</string>
+    <string name="pair_input_label">Enter pairing code</string>
+    <string name="status_pairing">Pairing…</string>
+    <string name="status_paired">Paired</string>
+    <string name="error_pair">Pairing failed: %1$s</string>
+    <string name="value_not_set">Not set</string>
+    <string name="value_optional">Optional</string>
+
+    <string name="permission_rationale">QuickNote records voice notes with the watch microphone. Allow mic access to continue.</string>
+
+    <string name="error_recorder">Recorder error: %1$s</string>
+    <string name="error_too_short">Recording too short — nothing captured</string>
+    <string name="error_upload">Upload failed</string>
+    <string name="error_file_gone">Audio file no longer exists</string>
+
+    <string name="tile_title">QuickNote</string>
+    <string name="tile_button">Record</string>
+
+    <string name="complication_label">Rec</string>
+    <string name="complication_description">Record a voice note</string>
+</resources>
