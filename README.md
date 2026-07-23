@@ -28,12 +28,18 @@ watch's LTE or wifi. No transcription on the watch, no phone relay.
 
 ## ✨ Why it exists
 
+I built this as a dead-simple way to fire voice notes straight to my AI agents in
+Discord. My agents live in Discord channels and act on what lands there — so a note
+spoken into my watch drops into a channel and an agent picks it up, transcribes it,
+and does something with it (logs a meal, files a task, answers a question). No phone,
+no copy-paste, no app to open — just talk to my wrist and the agents handle the rest.
+
 Most "voice memo" watch flows are three taps and a phone tether away from actually
 capturing the thought. By the time you've navigated there, it's gone. Wrist Hook
 collapses that to a single tap from a tile or complication — you're recording before
 you've finished the gesture — and ships the audio off-device the moment you stop.
-Ideal for hands-busy, phone-in-another-room capture that lands somewhere you can act
-on it (a Discord channel, an ingestion endpoint, whatever you point it at).
+Point it at a Discord webhook (where an agent is listening), an ingestion endpoint,
+or anything else that speaks HTTPS.
 
 ## 🎯 Features
 
