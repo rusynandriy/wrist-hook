@@ -1,4 +1,4 @@
-package com.rusyn.quicknote.net
+package com.rusyn.wristhook.net
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

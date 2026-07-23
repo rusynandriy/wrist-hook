@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "QuickNote"
+rootProject.name = "Wrist Hook"
 include(":app")

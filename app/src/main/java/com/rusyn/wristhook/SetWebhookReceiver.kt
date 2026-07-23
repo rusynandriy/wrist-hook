@@ -1,16 +1,16 @@
-package com.rusyn.quicknote
+package com.rusyn.wristhook
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.rusyn.quicknote.data.SettingsRepository
+import com.rusyn.wristhook.data.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
  * Lets you set the webhook URL over adb instead of typing it on the watch keyboard:
- *   adb shell am broadcast -a com.rusyn.quicknote.SET_WEBHOOK --es url "https://discord.com/api/webhooks/..."
+ *   adb shell am broadcast -a com.rusyn.wristhook.SET_WEBHOOK --es url "https://discord.com/api/webhooks/..."
  * Optional auth header:  --es auth "Bearer xyz"
  */
 class SetWebhookReceiver : BroadcastReceiver() {

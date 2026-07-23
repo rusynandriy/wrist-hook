@@ -1,4 +1,4 @@
-package com.rusyn.quicknote
+package com.rusyn.wristhook
 
 import android.Manifest
 import android.app.RemoteInput
@@ -17,12 +17,12 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.wear.input.RemoteInputIntentHelper
-import com.rusyn.quicknote.audio.Recorder
-import com.rusyn.quicknote.data.SettingsRepository
-import com.rusyn.quicknote.net.Pairing
-import com.rusyn.quicknote.net.Uploader
-import com.rusyn.quicknote.ui.QuickNoteApp
-import com.rusyn.quicknote.util.Haptics
+import com.rusyn.wristhook.audio.Recorder
+import com.rusyn.wristhook.data.SettingsRepository
+import com.rusyn.wristhook.net.Pairing
+import com.rusyn.wristhook.net.Uploader
+import com.rusyn.wristhook.ui.WristHookApp
+import com.rusyn.wristhook.util.Haptics
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -110,7 +110,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            QuickNoteApp(
+            WristHookApp(
                 screen = screen,
                 showSettings = showSettings,
                 webhookUrl = webhookUrl,
@@ -348,7 +348,7 @@ class MainActivity : ComponentActivity() {
         data?.let { RemoteInput.getResultsFromIntent(it)?.getCharSequence(KEY_INPUT)?.toString() }
 
     companion object {
-        private const val KEY_INPUT = "quicknote_input"
+        private const val KEY_INPUT = "wristhook_input"
 
         // Live level + silence detection. MediaRecorder amplitude is 0..32767;
         // thresholds are conservative and may want on-device tuning.

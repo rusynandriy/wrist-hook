@@ -1,4 +1,4 @@
-package com.rusyn.quicknote.audio
+package com.rusyn.wristhook.audio
 
 import android.content.Context
 import android.media.MediaRecorder

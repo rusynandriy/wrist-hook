@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.rusyn.quicknote"
+    namespace = "com.rusyn.wristhook"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.rusyn.quicknote"
+        applicationId = "com.rusyn.wristhook"
         minSdk = 33
         targetSdk = 36
         versionCode = 1

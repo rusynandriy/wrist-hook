@@ -1,4 +1,4 @@
-package com.rusyn.quicknote.ui
+package com.rusyn.wristhook.ui
 
 import android.os.SystemClock
 import androidx.compose.animation.core.RepeatMode
@@ -45,12 +45,12 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.TimeText
-import com.rusyn.quicknote.R
-import com.rusyn.quicknote.Screen
+import com.rusyn.wristhook.R
+import com.rusyn.wristhook.Screen
 import kotlinx.coroutines.delay
 
 @Composable
-fun QuickNoteApp(
+fun WristHookApp(
     screen: Screen,
     showSettings: Boolean,
     webhookUrl: String,

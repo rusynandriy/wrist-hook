@@ -1,6 +1,6 @@
-# Build Spec — Pixel Watch 4 Voice-Note App ("QuickNote")
+# Build Spec — Pixel Watch 4 Voice-Note App ("Wrist Hook")
 
-You are building a **standalone native Wear OS app** for a **Pixel Watch 4 (LTE, Wear OS 6.1 / Android 16)**. This runs the model **Fable 5**. Build the whole thing in this repo (`/Users/andriyrusyn/projects/watch-voice-note`).
+You are building a **standalone native Wear OS app** for a **Pixel Watch 4 (LTE, Wear OS 6.1 / Android 16)**. This runs the model **Fable 5**. Build the whole thing in this repo (`/Users/andriyrusyn/projects/wrist-hook`).
 
 ## Goal / UX
 One-tap from the watch face → the app opens **already recording** → user speaks → one tap to **stop & send** → the audio file is POSTed directly from the watch to a configurable HTTPS endpoint (a Discord webhook) → haptic buzz + checkmark confirms. Fully phone-free (the watch has LTE + wifi). No on-watch transcription. No phone relay. No file-sync dependency.
@@ -28,7 +28,7 @@ One-tap from the watch face → the app opens **already recording** → user spe
 - If the Gradle build can't be fully verified in this environment (SDK availability), still produce complete, correct source + build files and clearly note in the README what remains to verify on a machine with the Android SDK. Do NOT fake a successful build.
 
 ## Git / finish
-- Commit to a branch `feat/v1-quicknote` and keep `main` clean. (Personal project — no PR needed, but branch it.)
+- Commit to a branch `feat/v1-wristhook` and keep `main` clean. (Personal project — no PR needed, but branch it.)
 - When done, update Airtable rec **recr2KumMpbaawU2v**:
 ```
 source ~/.openclaw/workspace/.secrets

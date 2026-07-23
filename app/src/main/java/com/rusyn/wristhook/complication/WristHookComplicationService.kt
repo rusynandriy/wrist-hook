@@ -1,4 +1,4 @@
-package com.rusyn.quicknote.complication
+package com.rusyn.wristhook.complication
 
 import android.app.PendingIntent
 import android.content.Intent
@@ -11,14 +11,14 @@ import androidx.wear.watchface.complications.data.PlainComplicationText
 import androidx.wear.watchface.complications.data.ShortTextComplicationData
 import androidx.wear.watchface.complications.datasource.ComplicationDataSourceService
 import androidx.wear.watchface.complications.datasource.ComplicationRequest
-import com.rusyn.quicknote.MainActivity
-import com.rusyn.quicknote.R
+import com.rusyn.wristhook.MainActivity
+import com.rusyn.wristhook.R
 
 /**
  * Watch-face complication that opens MainActivity (which auto-starts recording).
  * Static content — the complication never needs a data refresh.
  */
-class QuickNoteComplicationService : ComplicationDataSourceService() {
+class WristHookComplicationService : ComplicationDataSourceService() {
 
     override fun onComplicationRequest(
         request: ComplicationRequest,

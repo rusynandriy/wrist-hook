@@ -1,4 +1,4 @@
-package com.rusyn.quicknote.tile
+package com.rusyn.wristhook.tile
 
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.wear.protolayout.ActionBuilders
@@ -25,7 +25,7 @@ private const val RESOURCES_VERSION = "2"
  * A one-tap tile: swipe to it on the watch face, tap "Record", and MainActivity
  * launches straight into recording.
  */
-class QuickNoteTileService : TileService() {
+class WristHookTileService : TileService() {
 
     override fun onTileRequest(
         requestParams: RequestBuilders.TileRequest,
@@ -40,7 +40,7 @@ class QuickNoteTileService : TileService() {
                         .setAndroidActivity(
                             ActionBuilders.AndroidActivity.Builder()
                                 .setPackageName(packageName)
-                                .setClassName("com.rusyn.quicknote.MainActivity")
+                                .setClassName("com.rusyn.wristhook.MainActivity")
                                 .build()
                         )
                         .build()
@@ -65,7 +65,7 @@ class QuickNoteTileService : TileService() {
                         .build()
                 )
                 .addContent(
-                    Text.Builder(this, getString(com.rusyn.quicknote.R.string.tile_button))
+                    Text.Builder(this, getString(com.rusyn.wristhook.R.string.tile_button))
                         .setTypography(Typography.TYPOGRAPHY_TITLE1)
                         .setColor(argb(Colors.DEFAULT.onPrimary))
                         .build()
@@ -123,7 +123,7 @@ class QuickNoteTileService : TileService() {
                         ResourceBuilders.ImageResource.Builder()
                             .setAndroidResourceByResId(
                                 ResourceBuilders.AndroidImageResourceByResId.Builder()
-                                    .setResourceId(com.rusyn.quicknote.R.drawable.ic_mic)
+                                    .setResourceId(com.rusyn.wristhook.R.drawable.ic_mic)
                                     .build()
                             )
                             .build()

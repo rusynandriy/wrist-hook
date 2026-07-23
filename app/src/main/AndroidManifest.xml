@@ -38,7 +38,7 @@
 
         <!-- One-tap tile: shows a Record button that launches straight into recording. -->
         <service
-            android:name=".tile.QuickNoteTileService"
+            android:name=".tile.WristHookTileService"
             android:exported="true"
             android:icon="@drawable/ic_mic"
             android:label="@string/app_name"
@@ -53,7 +53,7 @@
 
         <!-- Watch-face complication that launches straight into recording. -->
         <service
-            android:name=".complication.QuickNoteComplicationService"
+            android:name=".complication.WristHookComplicationService"
             android:exported="true"
             android:icon="@drawable/ic_mic"
             android:label="@string/app_name"
@@ -76,7 +76,7 @@
             android:name=".SetWebhookReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.rusyn.quicknote.SET_WEBHOOK" />
+                <action android:name="com.rusyn.wristhook.SET_WEBHOOK" />
             </intent-filter>
         </receiver>
     </application>

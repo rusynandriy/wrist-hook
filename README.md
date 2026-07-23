@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⌚ QuickNote
+# ⌚ Wrist Hook
 
 ### One-tap voice notes from a Pixel Watch 4 — straight to a webhook, phone-free.
 
@@ -29,7 +29,7 @@ watch's LTE or wifi. No transcription on the watch, no phone relay.
 ## ✨ Why it exists
 
 Most "voice memo" watch flows are three taps and a phone tether away from actually
-capturing the thought. By the time you've navigated there, it's gone. QuickNote
+capturing the thought. By the time you've navigated there, it's gone. Wrist Hook
 collapses that to a single tap from a tile or complication — you're recording before
 you've finished the gesture — and ships the audio off-device the moment you stop.
 Ideal for hands-busy, phone-in-another-room capture that lands somewhere you can act
@@ -110,8 +110,8 @@ type or dictate it. Later, long-press during a recording to reopen settings.
 # NOTE: target the receiver component explicitly with -n. A bare implicit
 # broadcast (-a only) will NOT be delivered to a manifest receiver on Android
 # 8+ and silently no-ops (am still prints result=0).
-adb shell am broadcast -n com.rusyn.quicknote/.SetWebhookReceiver \
-  -a com.rusyn.quicknote.SET_WEBHOOK \
+adb shell am broadcast -n com.rusyn.wristhook/.SetWebhookReceiver \
+  -a com.rusyn.wristhook.SET_WEBHOOK \
   --es url "https://discord.com/api/webhooks/<id>/<token>"
 # optional auth header for non-Discord endpoints:
 #   --es auth "Bearer <secret>"
@@ -124,9 +124,9 @@ it non-exported if that ever matters.
 ## 🧩 Add the tile / complication
 
 - **Tile**: from the watch face, swipe left to the end of your tiles → **+ Add tile**
-  (or long-press a tile) → pick **QuickNote**. Then swipe + one tap = recording.
+  (or long-press a tile) → pick **Wrist Hook**. Then swipe + one tap = recording.
 - **Complication**: long-press the watch face → **Customize** → tap a complication
-  slot → choose **QuickNote**. Supports short-text ("Rec" + mic icon) and
+  slot → choose **Wrist Hook**. Supports short-text ("Rec" + mic icon) and
   icon-only slots. Tapping it launches recording.
 
 ## ✅ Verification status

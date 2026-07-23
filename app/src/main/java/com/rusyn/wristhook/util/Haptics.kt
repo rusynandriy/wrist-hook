@@ -1,4 +1,4 @@
-package com.rusyn.quicknote.util
+package com.rusyn.wristhook.util
 
 import android.content.Context
 import android.os.VibrationEffect
