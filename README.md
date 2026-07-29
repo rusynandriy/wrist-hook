@@ -1,152 +1,129 @@
-<div align="center">
+# Wrist Hook
 
-# ⌚ Wrist Hook
-
-### One-tap voice notes from a Pixel Watch 4 — straight to a webhook, phone-free.
-
-Tap the watch face. It's **already recording.** Speak. Tap again. Your audio is on its way.
-No phone. No relay. No app to open. Just talk.
-
-<br>
+Record voice notes from your wrist. Raw audio is POSTed straight to any webhook
+you configure. No phone, no account, no tracking.
 
 ![Platform](https://img.shields.io/badge/platform-Wear%20OS-4285F4?logo=wearos&logoColor=white)
-![minSdk](https://img.shields.io/badge/minSdk-33-3DDC84?logo=android&logoColor=white)
 ![Language](https://img.shields.io/badge/Kotlin-100%25-7F52FF?logo=kotlin&logoColor=white)
-![Build](https://img.shields.io/badge/build-assembleDebug%20✓-success)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Standalone](https://img.shields.io/badge/standalone-LTE%20%2F%20wifi-orange)
 
-</div>
+A standalone Wear OS app (built and tested on a Pixel Watch 4). One tap on a
+tile or complication and it's already recording; speak; tap again and the `.m4a`
+is uploaded over the watch's own LTE or wifi to whatever HTTPS endpoint you
+point it at. A haptic buzz and a checkmark confirm the send.
 
----
+I built it because every existing watch voice-memo flow either needs the phone
+nearby, traps the audio in someone's cloud, or takes three taps to start. I
+wanted the thought captured before it evaporates, and the audio delivered
+somewhere *my* software can act on it — in my case a Discord channel where a
+bot transcribes and files it. Yours could be n8n, Home Assistant, or a
+five-line server on your LAN.
 
-A standalone native Wear OS app. One tap from the watch face opens the app **already
-recording**; speak; one tap stops the recording and POSTs the audio (`.m4a`, AAC)
-straight from the watch to a Discord webhook (or any HTTPS endpoint you configure).
-Haptic buzz + green checkmark confirm the send. Fully phone-free — works over the
-watch's LTE or wifi. No transcription on the watch, no phone relay.
+## How it works
 
-## ✨ Why it exists
+- **Record**: `MediaRecorder`, AAC mono 16 kHz @ 64 kbps in an MPEG-4 container
+  (`note-<timestamp>.m4a`), written to app cache. Whisper-friendly, ~0.5 MB/min.
+- **Upload**: `multipart/form-data` POST with one part named `file`
+  (`audio/mp4`). If the URL is a Discord webhook, a `payload_json` part is added
+  automatically (Discord requires it); other endpoints get a clean single-part
+  upload. Optional `Authorization` header. HTTPS only.
+- **On failure**: the file is kept and you get Retry / Settings / Discard —
+  nothing is lost on flaky LTE.
+- **Settings** (on-watch, persisted in DataStore): webhook URL, auth header,
+  auto-stop on silence, max recording length (30 s – 10 min, default 5 min),
+  accent color (red / blue / green / amber / violet).
 
-I built this as a dead-simple way to fire voice notes straight to my AI agents in
-Discord. My agents live in Discord channels and act on what lands there — so a note
-spoken into my watch drops into a channel and an agent picks it up, transcribes it,
-and does something with it (logs a meal, files a task, answers a question). No phone,
-no copy-paste, no app to open — just talk to my wrist and the agents handle the rest.
+## Setup
 
-Most "voice memo" watch flows are three taps and a phone tether away from actually
-capturing the thought. By the time you've navigated there, it's gone. Wrist Hook
-collapses that to a single tap from a tile or complication — you're recording before
-you've finished the gesture — and ships the audio off-device the moment you stop.
-Point it at a Discord webhook (where an agent is listening), an ingestion endpoint,
-or anything else that speaks HTTPS.
+1. Build & sideload (below), open the app, grant mic access.
+2. Set the webhook URL — either type/dictate it in settings, use a pairing code
+   from [andriy.lol/pair](https://andriy.lol/pair), or push it over adb
+   (debug builds only):
 
-## 🎯 Features
+   ```bash
+   adb shell am broadcast -n com.rusyn.wristhook/.SetWebhookReceiver \
+     -a com.rusyn.wristhook.SET_WEBHOOK \
+     --es url "https://example.com/hook"
+   # optional: --es auth "Bearer <secret>"
+   ```
 
-| | |
-|---|---|
-| 🎙️ **Instant capture** | Launches straight into recording — launcher icon, Wear **Tile**, or watch-face **complication**, all zero-menu |
-| 📡 **Phone-free upload** | POSTs over the watch's own LTE / wifi via OkHttp `multipart/form-data` — no companion app, no BT relay |
-| 💬 **Discord-native** | Sends exactly the `file` + `payload_json` multipart a Discord webhook expects — drop in a webhook URL and go |
-| 🔁 **Never loses a take** | On a dead link the `.m4a` is kept and you get **Retry / Settings / Discard** — nothing vanishes on flaky LTE |
-| 🔒 **Nothing hardcoded** | Webhook URL + optional `Authorization` header live in DataStore; set them on-watch or over adb |
-| 📳 **Tactile confirmation** | Haptic tap on record start, double-buzz + green ✓ on success, long buzz + error screen on failure |
+3. Add the entry point: swipe to the end of your tiles → **Add tile** →
+   Wrist Hook, or long-press the watch face → **Customize** → pick Wrist Hook
+   for a complication slot.
 
-## 🔧 How it works
+Then: tap → talk → tap. Long-press during a recording cancels the take;
+settings are on the menu that follows, and on the error screen.
 
-- **Record**: `MediaRecorder`, AAC in an MPEG-4 container (`note-<timestamp>.m4a`),
-  mono 44.1 kHz @ 128 kbps, written to app cache. Hard cap 5 minutes (auto stop & send).
-- **Upload**: OkHttp `multipart/form-data` POST — a `file` part (`audio/mp4`) plus a
-  `payload_json` part of `{"content":""}`, exactly what a Discord webhook expects.
-- **On failure**: the audio file is kept and the error screen offers **Retry** /
-  **Settings** / **Discard**. Nothing is lost on a dead LTE link.
-- **Entry points**: launcher icon, a Wear **Tile** ("Record" button), and a watch-face
-  **complication** (short-text or icon). All launch straight into recording.
-- **Settings**: webhook URL + optional `Authorization` header value, persisted with
-  DataStore. Nothing is hardcoded. Leave the auth header blank for plain Discord webhooks.
+## Integration recipes
 
-## 📲 In-app flow
+**Discord** — create a channel webhook (Channel settings → Integrations →
+Webhooks), paste the URL. The audio arrives as a file attachment; a bot can
+pick it up and transcribe.
 
-1. First launch: grant the microphone permission, then the settings screen asks for
-   the webhook URL (system keyboard/voice input).
-2. Every later launch: recording starts immediately (haptic tap confirms).
-   - **Tap anywhere** → stop & send.
-   - **Long-press** → cancel the take and open settings (this is also how you change
-     the URL later).
-3. Success: double buzz + checkmark, app closes itself. Failure: long buzz + error
-   screen with Retry.
+**n8n** — add a Webhook node (POST, binary data). The audio is in the `file`
+field. Chain a transcription node or drop it into storage.
 
-## 🛠️ Build
+**Home Assistant** — a [webhook trigger](https://www.home-assistant.io/docs/automation/trigger/#webhook-trigger)
+(`https://<ha>/api/webhook/<id>`) fires an automation; the multipart body is
+available to scripts/add-ons that handle uploads.
 
-Requirements: JDK 17+ and an Android SDK with platform `android-36`
-(`local.properties` should point at it, e.g. `sdk.dir=/Users/you/Library/Android/sdk`).
+**Generic + local Whisper** — a few lines of Python:
+
+```python
+from flask import Flask, request
+app = Flask(__name__)
+
+@app.post("/hook")
+def hook():
+    request.files["file"].save("/notes/in.m4a")   # then run whisper on it
+    return ""
+```
+
+## Compared to the alternatives
+
+| Tool | Phone required? | Raw audio to your endpoint? | Account / cloud required? | One-tap from watch face? | Open source? |
+|---|---|---|---|---|---|
+| **Wrist Hook** | No (LTE/wifi) | Yes — any HTTPS webhook | No | Yes (tile/complication) | Yes (MIT) |
+| Google Recorder (Pixel Watch) | For transcripts/sync | No — Google account sync | Google account | App launch | No |
+| Voice Recorder for Wear OS | Companion app to export | No — file export via phone | No | App launch | No |
+| Easy Voice Recorder (Wear) | Yes (sync to phone) | No — Drive/Dropbox/OneDrive | Cloud storage account | App launch | No |
+| Voicenotes / Otter-style AI notes | Mostly no (watch apps exist) | No — their cloud, their AI | Yes | Varies | No |
+| Tasker + AutoWear | Yes (Tasker runs on phone) | Possible, with real effort | No | Achievable | No (paid) |
+
+Honest notes: Google Recorder is excellent *if* you live in the Pixel ecosystem
+and want transcripts in Google's cloud — it just can't deliver audio to your
+own server. The generic recorder apps record fine but getting the file
+somewhere useful means a phone round-trip. Voicenotes/Otter give you polished
+AI notes but you're renting their pipeline. Tasker+AutoWear can be bent into
+almost anything, including this, if you enjoy plumbing. Wrist Hook only does
+one thing: mic → your URL.
+
+## Build & sideload
+
+JDK 17+ and Android SDK platform 36 (`local.properties` → `sdk.dir=...`).
 
 ```bash
 ./gradlew assembleDebug
-# APK: app/build/outputs/apk/debug/app-debug.apk
+# app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## 📥 Sideload to a Pixel Watch 4 over wireless ADB
-
-1. On the watch: **Settings → System → About → Versions** and tap **Build number**
-   7 times to enable Developer options.
-2. **Settings → Developer options → Wireless debugging** → turn it on (watch and
-   computer must be on the same wifi network).
-3. Tap **Pair new device**. The watch shows a pairing code plus an `IP:port`.
-4. On the computer:
-
-   ```bash
-   adb pair <IP>:<PAIR_PORT>        # enter the 6-digit code when prompted
-   adb connect <IP>:<CONNECT_PORT>  # the port shown on the main Wireless debugging screen (differs from the pairing port)
-   adb devices                      # should list the watch as "device"
-   adb install app/build/outputs/apk/debug/app-debug.apk
-   ```
-
-5. Keep the watch on its charger during install if the connection is flaky —
-   wifi on watches can be aggressive about sleeping.
-
-## 🔗 Set the webhook URL
-
-**On the watch**: first launch opens settings automatically → tap **Webhook URL** →
-type or dictate it. Later, long-press during a recording to reopen settings.
-
-**Over adb** (much easier than typing a 120-character URL on a watch):
+Sideload to the watch over wireless adb: enable Developer options (tap Build
+number 7×), turn on **Wireless debugging**, then:
 
 ```bash
-# NOTE: target the receiver component explicitly with -n. A bare implicit
-# broadcast (-a only) will NOT be delivered to a manifest receiver on Android
-# 8+ and silently no-ops (am still prints result=0).
-adb shell am broadcast -n com.rusyn.wristhook/.SetWebhookReceiver \
-  -a com.rusyn.wristhook.SET_WEBHOOK \
-  --es url "https://discord.com/api/webhooks/<id>/<token>"
-# optional auth header for non-Discord endpoints:
-#   --es auth "Bearer <secret>"
+adb pair <IP>:<PAIR_PORT>       # code shown on the watch
+adb connect <IP>:<CONNECT_PORT> # port from the main Wireless debugging screen
+adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Note: this receiver is exported for adb convenience, so any app installed on the
-watch could also set the URL. Fine for a personal v1; remove the receiver or make
-it non-exported if that ever matters.
+Keep the watch on its charger if the wifi connection is flaky.
 
-## 🧩 Add the tile / complication
+## Security & privacy
 
-- **Tile**: from the watch face, swipe left to the end of your tiles → **+ Add tile**
-  (or long-press a tile) → pick **Wrist Hook**. Then swipe + one tap = recording.
-- **Complication**: long-press the watch face → **Customize** → tap a complication
-  slot → choose **Wrist Hook**. Supports short-text ("Rec" + mic icon) and
-  icon-only slots. Tapping it launches recording.
+Short version: audio goes only to the URL you configure, over HTTPS, and
+nothing else leaves the watch. No analytics, no third-party services, no Google
+Play Services / Firebase dependencies. Details in [SECURITY.md](SECURITY.md).
 
-## ✅ Verification status
-
-- **Verified**: `./gradlew assembleDebug` builds successfully (macOS, JDK 23,
-  Android SDK platform 36, AGP 8.11.1, Gradle 8.13). The merged APK manifest was
-  inspected with `aapt2` and contains the mic/internet/vibrate permissions, the
-  launcher activity, the tile service, the complication service, and the
-  standalone-app flag.
-- **Not yet verified** (needs the physical watch): on-device install, mic capture
-  quality, tile/complication registration on the Pixel Watch 4 watch face, and a
-  live POST to a real Discord webhook. The upload format matches Discord's
-  documented webhook multipart contract (`file` part + `payload_json`).
-
-## 📜 License
+## License
 
 [MIT](LICENSE) © Andriy Rusyn

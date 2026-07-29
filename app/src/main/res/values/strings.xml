@@ -23,12 +23,19 @@
     <string name="hint_pending_send">Tap to send now\nHold to cancel</string>
 
     <string name="settings_title">Settings</string>
-    <string name="settings_hint_url_required">Paste your Discord webhook URL to continue</string>
+    <string name="settings_hint_url_required">Set a webhook URL to continue</string>
     <string name="label_webhook_url">Webhook URL</string>
     <string name="label_auth_header">Auth header</string>
     <string name="label_pair_code">Pair with code</string>
     <string name="value_pair_hint">Get a code at andriy.lol/pair</string>
     <string name="label_auto_stop">Auto-stop on silence</string>
+    <string name="label_max_length">Max length</string>
+    <string name="label_accent">Accent color</string>
+    <string name="accent_red">Red</string>
+    <string name="accent_blue">Blue</string>
+    <string name="accent_green">Green</string>
+    <string name="accent_amber">Amber</string>
+    <string name="accent_violet">Violet</string>
     <string name="value_on">On</string>
     <string name="value_off">Off</string>
     <string name="pair_input_label">Enter pairing code</string>
@@ -41,7 +48,6 @@
     <string name="permission_rationale">Wrist Hook records voice notes with the watch microphone. Allow mic access to continue.</string>
 
     <string name="error_recorder">Recorder error: %1$s</string>
-    <string name="error_too_short">Recording too short — nothing captured</string>
     <string name="error_upload">Upload failed</string>
     <string name="error_file_gone">Audio file no longer exists</string>
 

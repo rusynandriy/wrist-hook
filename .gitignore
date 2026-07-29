@@ -1,6 +1,8 @@
 .gradle/
 build/
 local.properties
+# Internal build/workflow notes — not part of the public repo
+BUILD_SPEC.md
 .idea/
 .DS_Store
 *.iml

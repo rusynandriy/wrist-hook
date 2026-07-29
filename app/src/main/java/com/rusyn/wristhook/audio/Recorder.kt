@@ -31,9 +31,13 @@ class Recorder {
 
     /**
      * Starts recording into a new cache file and returns it.
-     * [onMaxDuration] fires (on an arbitrary thread) if the hard cap is hit.
+     * [onMaxDuration] fires (on an arbitrary thread) if [maxDurationMs] is hit.
+     *
+     * The cap is fixed at prepare() time, so the caller passes the largest
+     * allowed value when the user's setting isn't loaded yet and enforces the
+     * real limit itself (MainActivity's amplitude monitor does this).
      */
-    fun start(context: Context, onMaxDuration: () -> Unit): File {
+    fun start(context: Context, maxDurationMs: Int, onMaxDuration: () -> Unit): File {
         check(recorder == null) { "Already recording" }
         val out = File(context.cacheDir, "note-${System.currentTimeMillis()}.m4a")
         val r = MediaRecorder(context)
@@ -46,7 +50,7 @@ class Recorder {
             // files, and no quality loss for speech transcription.
             r.setAudioSamplingRate(16_000)
             r.setAudioEncodingBitRate(64_000)
-            r.setMaxDuration(MAX_DURATION_MS)
+            r.setMaxDuration(maxDurationMs)
             r.setOutputFile(out.absolutePath)
             r.setOnInfoListener { _, what, _ ->
                 if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) onMaxDuration()
@@ -98,7 +102,8 @@ class Recorder {
     }
 
     companion object {
-        // Spec asks for robustness up to ~3 min; hard-stop at 5 min as a safety net.
-        const val MAX_DURATION_MS = 5 * 60 * 1000
+        // Absolute ceiling regardless of the user's max-length setting; recording
+        // starts before settings finish loading, so this is the prepare()-time cap.
+        const val HARD_CAP_MS = 10 * 60 * 1000
     }
 }

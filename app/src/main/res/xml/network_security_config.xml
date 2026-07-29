@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HTTPS only: audio and the Authorization header must never travel in the
+     clear. The Uploader also rejects non-https URLs with a readable error. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

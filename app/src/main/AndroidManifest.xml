@@ -10,8 +10,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- allowBackup=false: settings hold the webhook URL and an optional auth
+         secret; keep them out of cloud backups. Cleartext HTTP is banned via
+         the network security config (uploads are HTTPS-only). -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.DeviceDefault">
@@ -69,12 +74,14 @@
                 android:value="0" />
         </service>
 
-        <!-- Convenience: set the webhook URL over adb (SET_WEBHOOK broadcast with an
-             "url" string extra; see README). Exported, so any on-watch app could also
-             set it. Acceptable for v1. -->
+        <!-- Set the webhook URL over adb (SET_WEBHOOK broadcast with a "url"
+             string extra; see README). Not exported here: an exported receiver
+             would let any app on the watch silently redirect recordings to its
+             own endpoint. The debug manifest re-exports it so adb configuration
+             keeps working on sideloaded debug builds. -->
         <receiver
             android:name=".SetWebhookReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.rusyn.wristhook.SET_WEBHOOK" />
             </intent-filter>

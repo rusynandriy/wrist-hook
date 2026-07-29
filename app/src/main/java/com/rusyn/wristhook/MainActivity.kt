@@ -49,8 +49,9 @@ class MainActivity : ComponentActivity() {
     private var webhookUrl by mutableStateOf(SettingsRepository.DEFAULT_WEBHOOK_URL)
     private var authHeader by mutableStateOf("")
     private var recordingStartedAt by mutableStateOf(0L)
-    private var amplitude by mutableStateOf(0)
     private var autoStopOnSilence by mutableStateOf(SettingsRepository.DEFAULT_AUTO_STOP)
+    private var maxRecordSec by mutableStateOf(SettingsRepository.DEFAULT_MAX_RECORD_SEC)
+    private var accent by mutableStateOf(SettingsRepository.DEFAULT_ACCENT)
     private var lastFile: File? = null
     private var prefsLoaded = false
     private var amplitudeJob: Job? = null
@@ -84,12 +85,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        settings = SettingsRepository(applicationContext)
-        // Short-lived app: keep the screen on so recording isn't interrupted by sleep.
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // Start capturing IMMEDIATELY. The webhook URL is only needed at send
-        // time (seconds later), so we never block the mic on the settings disk
+        // Start capturing IMMEDIATELY — nothing runs before this except the
+        // permission check. The webhook URL is only needed at send time
+        // (seconds later), so we never block the mic on the settings disk
         // read — that read was the main tap-to-record lag.
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
@@ -100,14 +99,22 @@ class MainActivity : ComponentActivity() {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
 
-        // Pick up any stored overrides in the background (ready well before stop).
+        settings = SettingsRepository(applicationContext)
+        // Short-lived app: keep the screen on so recording isn't interrupted by sleep.
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Pick up any stored overrides in the background (ready well before stop),
+        // and build the OkHttp client off-main so the first send doesn't pay for it.
         lifecycleScope.launch {
             val loaded = settings.load()
             webhookUrl = loaded.webhookUrl
             authHeader = loaded.authHeader
             autoStopOnSilence = loaded.autoStopOnSilence
+            maxRecordSec = loaded.maxRecordSec
+            accent = loaded.accent
             prefsLoaded = true
         }
+        lifecycleScope.launch { Uploader.prewarm() }
 
         setContent {
             WristHookApp(
@@ -116,6 +123,8 @@ class MainActivity : ComponentActivity() {
                 webhookUrl = webhookUrl,
                 authHeader = authHeader,
                 autoStopOnSilence = autoStopOnSilence,
+                maxRecordSec = maxRecordSec,
+                accent = accent,
                 recordingStartedAt = recordingStartedAt,
                 onStopAndSend = ::stopAndArm,
                 onCancelRecording = ::cancelRecording,
@@ -130,6 +139,8 @@ class MainActivity : ComponentActivity() {
                 onEditAuth = { launchRemoteInput(getString(R.string.label_auth_header), authInputLauncher) },
                 onPairCode = { launchRemoteInput(getString(R.string.pair_input_label), codeInputLauncher) },
                 onToggleAutoStop = ::toggleAutoStop,
+                onCycleMaxRecord = ::cycleMaxRecord,
+                onCycleAccent = ::cycleAccent,
                 onSettingsDone = ::settingsDone,
                 onRequestPermission = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
             )
@@ -170,9 +181,11 @@ class MainActivity : ComponentActivity() {
         if (recorder.isRecording) return
         pendingSendJob?.cancel()
         try {
-            lastFile = recorder.start(this) { runOnUiThread { stopAndArm() } }
+            // The prepare()-time cap is the hard ceiling; the user's configured
+            // max length is enforced by the monitor below (settings may still be
+            // loading at this point — recording never waits for them).
+            lastFile = recorder.start(this, Recorder.HARD_CAP_MS) { runOnUiThread { stopAndArm() } }
             recordingStartedAt = SystemClock.elapsedRealtime()
-            amplitude = 0
             Haptics.recordingStarted(this)
             screen = Screen.Recording
             startAmplitudeMonitor()
@@ -182,8 +195,8 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Single consumer of the recorder's amplitude: drives the on-screen level
-     * meter and, when enabled, auto-stops after a pause once speech is heard.
+     * Single consumer of the recorder's amplitude: enforces the configured max
+     * length and, when enabled, auto-stops after a pause once speech is heard.
      */
     private fun startAmplitudeMonitor() {
         amplitudeJob?.cancel()
@@ -192,10 +205,13 @@ class MainActivity : ComponentActivity() {
             var silentSince = 0L
             while (screen is Screen.Recording) {
                 val amp = recorder.amplitude()
-                amplitude = amp
+                val now = SystemClock.elapsedRealtime()
+                val recordedFor = now - recordingStartedAt
+                if (recordedFor >= maxRecordSec * 1000L) {
+                    stopAndArm()
+                    break
+                }
                 if (autoStopOnSilence) {
-                    val now = SystemClock.elapsedRealtime()
-                    val recordedFor = now - recordingStartedAt
                     when {
                         amp >= SPEECH_THRESHOLD -> { speechStarted = true; silentSince = 0L }
                         speechStarted && amp < SILENCE_THRESHOLD -> {
@@ -221,7 +237,12 @@ class MainActivity : ComponentActivity() {
         amplitudeJob?.cancel()
         val file = recorder.stop()
         if (file == null) {
-            screen = Screen.Error(getString(R.string.error_too_short))
+            // Nothing usable captured — almost always a misfired gesture right
+            // after launch. Land on the idle menu, not the error screen: the
+            // error screen's Settings chip sits where a lingering finger can
+            // hit it, which read as "long-press opened settings".
+            Haptics.recordingCancelled(this)
+            screen = Screen.Idle
             return
         }
         lastFile = file
@@ -257,6 +278,22 @@ class MainActivity : ComponentActivity() {
         val next = !autoStopOnSilence
         autoStopOnSilence = next
         lifecycleScope.launch { settings.setAutoStopOnSilence(next) }
+    }
+
+    /** Tap the max-length chip to advance to the next option (wraps around). */
+    private fun cycleMaxRecord() {
+        val options = SettingsRepository.MAX_RECORD_OPTIONS_SEC
+        val next = options[(options.indexOf(maxRecordSec) + 1).mod(options.size)]
+        maxRecordSec = next
+        lifecycleScope.launch { settings.setMaxRecordSec(next) }
+    }
+
+    /** Tap the accent chip to advance to the next colour preset (wraps around). */
+    private fun cycleAccent() {
+        val options = SettingsRepository.ACCENT_OPTIONS
+        val next = options[(options.indexOf(accent) + 1).mod(options.size)]
+        accent = next
+        lifecycleScope.launch { settings.setAccent(next) }
     }
 
     private fun sendFile(file: File) {
