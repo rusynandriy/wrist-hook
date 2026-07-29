@@ -40,6 +40,7 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.CircularProgressIndicator
+import androidx.wear.compose.material.Colors
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Scaffold
@@ -49,6 +50,31 @@ import com.rusyn.wristhook.R
 import com.rusyn.wristhook.Screen
 import kotlinx.coroutines.delay
 
+/** Accent presets selectable in settings; keys match SettingsRepository.ACCENT_OPTIONS. */
+object AccentPresets {
+    private val colors = mapOf(
+        "red" to Color(0xFFE53935),
+        "blue" to Color(0xFF42A5F5),
+        "green" to Color(0xFF43A047),
+        "amber" to Color(0xFFFFB300),
+        "violet" to Color(0xFFAB47BC),
+    )
+
+    val labels = mapOf(
+        "red" to R.string.accent_red,
+        "blue" to R.string.accent_blue,
+        "green" to R.string.accent_green,
+        "amber" to R.string.accent_amber,
+        "violet" to R.string.accent_violet,
+    )
+
+    fun color(name: String): Color = colors[name] ?: colors.getValue("red")
+}
+
+/** "30 sec" / "2 min" style label for the max-length chip. */
+fun formatMaxRecord(sec: Int): String =
+    if (sec < 60) "$sec sec" else "${sec / 60} min"
+
 @Composable
 fun WristHookApp(
     screen: Screen,
@@ -56,6 +82,8 @@ fun WristHookApp(
     webhookUrl: String,
     authHeader: String,
     autoStopOnSilence: Boolean,
+    maxRecordSec: Int,
+    accent: String,
     recordingStartedAt: Long,
     onStopAndSend: () -> Unit,
     onCancelRecording: () -> Unit,
@@ -70,10 +98,15 @@ fun WristHookApp(
     onEditAuth: () -> Unit,
     onPairCode: () -> Unit,
     onToggleAutoStop: () -> Unit,
+    onCycleMaxRecord: () -> Unit,
+    onCycleAccent: () -> Unit,
     onSettingsDone: () -> Unit,
     onRequestPermission: () -> Unit,
 ) {
-    MaterialTheme {
+    val accentColor = AccentPresets.color(accent)
+    MaterialTheme(
+        colors = Colors(primary = accentColor, secondary = accentColor)
+    ) {
         Scaffold(timeText = { TimeText() }) {
             Box(
                 modifier = Modifier
@@ -82,8 +115,9 @@ fun WristHookApp(
             ) {
                 when {
                     showSettings -> SettingsScreen(
-                        webhookUrl, authHeader, autoStopOnSilence,
-                        onEditUrl, onEditAuth, onPairCode, onToggleAutoStop, onSettingsDone
+                        webhookUrl, authHeader, autoStopOnSilence, maxRecordSec, accent,
+                        onEditUrl, onEditAuth, onPairCode, onToggleAutoStop,
+                        onCycleMaxRecord, onCycleAccent, onSettingsDone
                     )
                     screen is Screen.Loading -> CenteredMessage(
                         stringResource(R.string.status_loading)
@@ -144,7 +178,7 @@ private fun RecordingScreen(
             modifier = Modifier
                 .size(20.dp)
                 .graphicsLayer { this.alpha = alpha }
-                .background(Color.Red, CircleShape),
+                .background(MaterialTheme.colors.primary, CircleShape),
         )
         Text(
             text = "%d:%02d".format(elapsedSec / 60, elapsedSec % 60),
@@ -213,13 +247,13 @@ private fun SuccessScreen() {
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .background(Color(0xFF2E7D32), CircleShape),
+                .background(MaterialTheme.colors.primary, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_check),
                 contentDescription = stringResource(R.string.status_sent),
-                tint = Color.White,
+                tint = MaterialTheme.colors.onPrimary,
                 modifier = Modifier.size(32.dp),
             )
         }
@@ -320,10 +354,14 @@ private fun SettingsScreen(
     webhookUrl: String,
     authHeader: String,
     autoStopOnSilence: Boolean,
+    maxRecordSec: Int,
+    accent: String,
     onEditUrl: () -> Unit,
     onEditAuth: () -> Unit,
     onPairCode: () -> Unit,
     onToggleAutoStop: () -> Unit,
+    onCycleMaxRecord: () -> Unit,
+    onCycleAccent: () -> Unit,
     onDone: () -> Unit,
 ) {
     ScalingLazyColumn(
@@ -391,6 +429,33 @@ private fun SettingsScreen(
                         text = stringResource(
                             if (autoStopOnSilence) R.string.value_on else R.string.value_off
                         ),
+                    )
+                },
+                colors = ChipDefaults.secondaryChipColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        item {
+            Chip(
+                onClick = onCycleMaxRecord,
+                label = { Text(stringResource(R.string.label_max_length)) },
+                secondaryLabel = { Text(formatMaxRecord(maxRecordSec)) },
+                colors = ChipDefaults.secondaryChipColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        item {
+            Chip(
+                onClick = onCycleAccent,
+                label = { Text(stringResource(R.string.label_accent)) },
+                secondaryLabel = {
+                    Text(stringResource(AccentPresets.labels[accent] ?: R.string.accent_red))
+                },
+                icon = {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .background(AccentPresets.color(accent), CircleShape),
                     )
                 },
                 colors = ChipDefaults.secondaryChipColors(),

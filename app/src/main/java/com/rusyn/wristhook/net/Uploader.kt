@@ -2,6 +2,7 @@ package com.rusyn.wristhook.net
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -12,8 +13,10 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
- * Uploads a recorded note as multipart/form-data in the exact shape a Discord
- * webhook expects: a `file` part with the audio, plus a `payload_json` part.
+ * Uploads a recorded note as multipart/form-data: a `file` part with the audio.
+ * Discord webhooks additionally require a `payload_json` part, which is added
+ * automatically when the URL points at Discord — other endpoints get a clean
+ * single-part upload.
  */
 object Uploader {
 
@@ -25,12 +28,29 @@ object Uploader {
             .build()
     }
 
+    /** Builds the client (thread pools, TLS setup) ahead of the first send. */
+    suspend fun prewarm() = withContext(Dispatchers.IO) { client }
+
+    private fun isDiscord(url: String): Boolean {
+        val host = url.toHttpUrlOrNull()?.host ?: return false
+        return host == "discord.com" || host == "discordapp.com" ||
+            host.endsWith(".discord.com") || host.endsWith(".discordapp.com")
+    }
+
     suspend fun upload(url: String, authHeader: String, file: File): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
+                val parsed = url.toHttpUrlOrNull() ?: throw IOException("Invalid webhook URL")
+                // Belt and braces with the manifest's cleartext ban: never send
+                // audio (or the Authorization header) over plain HTTP.
+                if (!parsed.isHttps) throw IOException("Webhook URL must be https")
+
                 val body = MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
-                    .addFormDataPart("payload_json", """{"content":""}""")
+                    .apply {
+                        // Discord rejects file-only webhooks without payload_json.
+                        if (isDiscord(url)) addFormDataPart("payload_json", """{"content":""}""")
+                    }
                     .addFormDataPart(
                         "file",
                         file.name,
@@ -39,7 +59,7 @@ object Uploader {
                     .build()
 
                 val request = Request.Builder()
-                    .url(url) // throws IllegalArgumentException on a malformed URL
+                    .url(parsed)
                     .post(body)
                     .apply { if (authHeader.isNotBlank()) header("Authorization", authHeader) }
                     .build()

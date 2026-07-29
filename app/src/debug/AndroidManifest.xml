@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug-only: re-export SetWebhookReceiver so the webhook URL can be set over
+     adb on sideloaded builds (see README). Release builds keep it non-exported. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <receiver
+            android:name=".SetWebhookReceiver"
+            android:exported="true"
+            tools:replace="android:exported">
+            <intent-filter>
+                <action android:name="com.rusyn.wristhook.SET_WEBHOOK" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
