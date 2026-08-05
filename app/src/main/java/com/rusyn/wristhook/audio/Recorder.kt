@@ -42,13 +42,19 @@ class Recorder {
         val out = File(context.cacheDir, "note-${System.currentTimeMillis()}.m4a")
         val r = MediaRecorder(context)
         try {
-            r.setAudioSource(MediaRecorder.AudioSource.MIC)
+            // VOICE_RECOGNITION requests the raw primary mic tuned for speech, with
+            // no AGC/noise-suppression surprises. Plain MIC on Wear OS can route to a
+            // processed or Bluetooth-SCO path, which was giving intermittently garbled
+            // takes and, because the HAL then thrashes to feed buffers, a frozen UI.
+            r.setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
             r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
             r.setAudioChannels(1)
-            // 16 kHz mono is Whisper's native rate — faster encoder init, smaller
-            // files, and no quality loss for speech transcription.
-            r.setAudioSamplingRate(16_000)
+            // 48 kHz is the watch mic's native capture rate: recording here avoids the
+            // in-HAL resampler that underran at 16 kHz (the source of the garbling).
+            // Whisper downsamples to 16 kHz itself, so there's no downside. 64 kbps
+            // keeps a full 10-min note ≈ 4.8 MB, safely under Discord's upload limit.
+            r.setAudioSamplingRate(48_000)
             r.setAudioEncodingBitRate(64_000)
             r.setMaxDuration(maxDurationMs)
             r.setOutputFile(out.absolutePath)
@@ -104,6 +110,8 @@ class Recorder {
     companion object {
         // Absolute ceiling regardless of the user's max-length setting; recording
         // starts before settings finish loading, so this is the prepare()-time cap.
-        const val HARD_CAP_MS = 10 * 60 * 1000
+        // Kept above the largest user option (10 min) so the configured limit — not
+        // this safety net — is what normally stops a take.
+        const val HARD_CAP_MS = 15 * 60 * 1000
     }
 }

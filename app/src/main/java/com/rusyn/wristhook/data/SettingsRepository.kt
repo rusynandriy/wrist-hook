@@ -62,7 +62,7 @@ class SettingsRepository(private val context: Context) {
 
         // Auto stop & send when a take reaches this length.
         val MAX_RECORD_OPTIONS_SEC = listOf(30, 60, 120, 300, 600)
-        const val DEFAULT_MAX_RECORD_SEC = 300
+        const val DEFAULT_MAX_RECORD_SEC = 600
 
         // Accent presets; names are keys into ui.AccentPresets.
         val ACCENT_OPTIONS = listOf("red", "blue", "green", "amber", "violet")
