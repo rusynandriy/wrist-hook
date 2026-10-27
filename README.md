@@ -27,8 +27,13 @@ five-line server on your LAN.
   (`audio/mp4`). If the URL is a Discord webhook, a `payload_json` part is added
   automatically (Discord requires it); other endpoints get a clean single-part
   upload. Optional `Authorization` header. HTTPS only.
-- **On failure**: the file is kept and you get Retry / Settings / Discard —
-  nothing is lost on flaky LTE.
+- **Network**: the phone's Bluetooth proxy when it's in range; otherwise the
+  app asks Wear OS for the watch's own Wi-Fi or LTE (the platform keeps those
+  radios off until an app requests them).
+- **On failure**: the note stays in an on-watch outbox (`files/outbox/`) and a
+  WorkManager job retries it with backoff, and as soon as any network appears,
+  until the webhook returns 2xx, even if the app is closed or the watch
+  reboots. Retry / Settings / Discard are still on the error screen.
 - **Settings** (on-watch, persisted in DataStore): webhook URL, auth header,
   auto-stop on silence, max recording length (30 s – 10 min, default 5 min),
   accent color (red / blue / green / amber / violet).

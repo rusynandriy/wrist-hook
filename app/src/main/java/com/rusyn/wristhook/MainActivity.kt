@@ -18,11 +18,13 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.wear.input.RemoteInputIntentHelper
 import com.rusyn.wristhook.audio.Recorder
+import com.rusyn.wristhook.data.Outbox
 import com.rusyn.wristhook.data.SettingsRepository
 import com.rusyn.wristhook.net.Pairing
 import com.rusyn.wristhook.net.Uploader
 import com.rusyn.wristhook.ui.WristHookApp
 import com.rusyn.wristhook.util.Haptics
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -115,6 +117,9 @@ class MainActivity : ComponentActivity() {
             prefsLoaded = true
         }
         lifecycleScope.launch { Uploader.prewarm() }
+        // Deliver anything left over from earlier failed sends (and pull in
+        // notes stranded by older builds). Off-main: WorkManager init hits disk.
+        lifecycleScope.launch(Dispatchers.IO) { Outbox.schedule(applicationContext) }
 
         setContent {
             WristHookApp(
@@ -298,27 +303,56 @@ class MainActivity : ComponentActivity() {
 
     private fun sendFile(file: File) {
         screen = Screen.Sending
+        // Into the durable outbox before the first attempt: from here on the note
+        // survives a failed send, the app closing, or the watch rebooting.
+        // Claim first so the background worker never picks up the same note.
+        val claimed = Outbox.claim(file)
+        val queued = Outbox.adopt(applicationContext, file)
+        lastFile = queued
         lifecycleScope.launch {
-            Uploader.upload(webhookUrl, authHeader, file)
+            val result = when {
+                !queued.exists() -> Result.success(Unit) // the worker already delivered it
+                !claimed -> Result.failure(java.io.IOException(getString(R.string.error_upload)))
+                else -> try {
+                    Uploader.upload(applicationContext, webhookUrl, authHeader, queued)
+                } finally {
+                    Outbox.release(queued)
+                }
+            }
+            result
                 .onSuccess {
-                    file.delete()
+                    queued.delete()
                     lastFile = null
+                    // Flush anything older still waiting in the outbox.
+                    launch(Dispatchers.IO) { Outbox.schedule(applicationContext) }
                     Haptics.sendSucceeded(this@MainActivity)
                     screen = Screen.Success
                     delay(1500)
                     finish()
                 }
                 .onFailure { e ->
-                    // Keep the file on disk so the note isn't lost; offer retry.
+                    // The note stays in the outbox and the worker keeps retrying it
+                    // in the background; Retry here just tries again right now.
+                    launch(Dispatchers.IO) { Outbox.schedule(applicationContext, replace = true) }
                     Haptics.sendFailed(this@MainActivity)
-                    screen = Screen.Error(e.message ?: getString(R.string.error_upload))
+                    screen = Screen.Error(
+                        getString(R.string.error_queued, e.message ?: getString(R.string.error_upload))
+                    )
                 }
         }
     }
 
     private fun retryUpload() {
         val file = lastFile
-        if (file == null || !file.exists()) {
+        if (file != null && !file.exists()) {
+            // The background worker delivered it while the error screen was up.
+            lastFile = null
+            Haptics.sendSucceeded(this)
+            screen = Screen.Success
+            lifecycleScope.launch { delay(1500); finish() }
+            return
+        }
+        if (file == null) {
             screen = Screen.Error(getString(R.string.error_file_gone))
             return
         }

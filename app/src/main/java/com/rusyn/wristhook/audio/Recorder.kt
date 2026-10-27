@@ -2,10 +2,12 @@ package com.rusyn.wristhook.audio
 
 import android.content.Context
 import android.media.MediaRecorder
+import com.rusyn.wristhook.data.Outbox
 import java.io.File
 
 /**
- * Thin wrapper around MediaRecorder producing an AAC/MPEG-4 (.m4a) file in the app cache.
+ * Thin wrapper around MediaRecorder producing an AAC/MPEG-4 (.m4a) file in app storage
+ * (files/recording/, not the cache: the system may trim the cache before a failed send is retried).
  * Mono, 44.1 kHz, 128 kbps — Whisper-friendly and small enough to upload over LTE
  * (~3 min ≈ 2.8 MB, well under Discord's file-size limit).
  */
@@ -30,7 +32,7 @@ class Recorder {
     }
 
     /**
-     * Starts recording into a new cache file and returns it.
+     * Starts recording into a new file and returns it.
      * [onMaxDuration] fires (on an arbitrary thread) if [maxDurationMs] is hit.
      *
      * The cap is fixed at prepare() time, so the caller passes the largest
@@ -39,7 +41,7 @@ class Recorder {
      */
     fun start(context: Context, maxDurationMs: Int, onMaxDuration: () -> Unit): File {
         check(recorder == null) { "Already recording" }
-        val out = File(context.cacheDir, "note-${System.currentTimeMillis()}.m4a")
+        val out = File(Outbox.recordingDir(context), "note-${System.currentTimeMillis()}.m4a")
         val r = MediaRecorder(context)
         try {
             // VOICE_RECOGNITION requests the raw primary mic tuned for speech, with

@@ -290,7 +290,7 @@ private fun ErrorScreen(
                 style = MaterialTheme.typography.caption1,
                 color = MaterialTheme.colors.onSurfaceVariant,
                 textAlign = TextAlign.Center,
-                maxLines = 3,
+                maxLines = 5,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(vertical = 6.dp),
             )
