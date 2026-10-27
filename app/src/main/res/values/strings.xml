@@ -49,6 +49,7 @@
 
     <string name="error_recorder">Recorder error: %1$s</string>
     <string name="error_upload">Upload failed</string>
+    <string name="error_queued">Saved. Sends automatically once online.\n%1$s</string>
     <string name="error_file_gone">Audio file no longer exists</string>
 
     <string name="tile_title">Wrist Hook</string>

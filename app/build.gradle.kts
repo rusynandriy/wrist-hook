@@ -72,4 +72,7 @@ dependencies {
     // Upload + settings persistence
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.datastore:datastore-preferences:1.1.6")
+
+    // Durable outbox: background retry of failed sends
+    implementation("androidx.work:work-runtime-ktx:2.10.1")
 }
