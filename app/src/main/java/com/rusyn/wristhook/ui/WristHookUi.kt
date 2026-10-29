@@ -75,6 +75,9 @@ object AccentPresets {
 fun formatMaxRecord(sec: Int): String =
     if (sec < 60) "$sec sec" else "${sec / 60} min"
 
+/** "0:42" style length of a take. */
+fun formatDuration(sec: Int): String = "%d:%02d".format(sec / 60, sec % 60)
+
 @Composable
 fun WristHookApp(
     screen: Screen,
@@ -90,6 +93,8 @@ fun WristHookApp(
     onSendNow: () -> Unit,
     onCancelPendingSend: () -> Unit,
     onRecordAgain: () -> Unit,
+    undoTakeSec: Int?,
+    onUndoCancel: () -> Unit,
     onRetry: () -> Unit,
     onDiscard: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -122,7 +127,9 @@ fun WristHookApp(
                     screen is Screen.Loading -> CenteredMessage(
                         stringResource(R.string.status_loading)
                     )
-                    screen is Screen.Idle -> IdleMenu(onRecordAgain, onOpenSettings, onClose)
+                    screen is Screen.Idle -> IdleMenu(
+                        onRecordAgain, undoTakeSec, onUndoCancel, onOpenSettings, onClose
+                    )
                     screen is Screen.NeedsPermission -> PermissionScreen(onRequestPermission)
                     screen is Screen.Recording -> RecordingScreen(
                         recordingStartedAt, onStopAndSend, onCancelRecording
@@ -181,7 +188,7 @@ private fun RecordingScreen(
                 .background(MaterialTheme.colors.primary, CircleShape),
         )
         Text(
-            text = "%d:%02d".format(elapsedSec / 60, elapsedSec % 60),
+            text = formatDuration(elapsedSec),
             style = MaterialTheme.typography.title2,
             modifier = Modifier.padding(top = 14.dp),
         )
@@ -304,6 +311,8 @@ private fun ErrorScreen(
 @Composable
 private fun IdleMenu(
     onRecordAgain: () -> Unit,
+    undoTakeSec: Int?,
+    onUndoCancel: () -> Unit,
     onOpenSettings: () -> Unit,
     onClose: () -> Unit,
 ) {
@@ -319,6 +328,15 @@ private fun IdleMenu(
             )
         }
         item { FullWidthChip(stringResource(R.string.action_record_again), onRecordAgain) }
+        if (undoTakeSec != null) {
+            item {
+                FullWidthChip(
+                    stringResource(R.string.action_undo_cancel, formatDuration(undoTakeSec)),
+                    onUndoCancel,
+                    secondary = true,
+                )
+            }
+        }
         item { FullWidthChip(stringResource(R.string.action_settings), onOpenSettings, secondary = true) }
         item { FullWidthChip(stringResource(R.string.action_close), onClose, secondary = true) }
     }

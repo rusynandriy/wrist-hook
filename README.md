@@ -34,6 +34,9 @@ five-line server on your LAN.
   WorkManager job retries it with backoff, and as soon as any network appears,
   until the webhook returns 2xx, even if the app is closed or the watch
   reboots. Retry / Settings / Discard are still on the error screen.
+- **Undo**: a cancelled or discarded take isn't deleted right away. It waits
+  in `files/cancelled/` (24 h, newest 5), and the menu after a cancel offers
+  **Undo cancel · 0:42** to send the newest one after all.
 - **Settings** (on-watch, persisted in DataStore): webhook URL, auth header,
   auto-stop on silence, max recording length (30 s – 10 min, default 5 min),
   accent color (red / blue / green / amber / violet).
@@ -57,7 +60,8 @@ five-line server on your LAN.
    for a complication slot.
 
 Then: tap → talk → tap. Long-press during a recording cancels the take;
-settings are on the menu that follows, and on the error screen.
+the menu that follows has Undo and settings (settings are also on the error
+screen).
 
 ## Integration recipes
 
