@@ -96,17 +96,17 @@ class Recorder {
         }
     }
 
-    /** Stops (if needed) and deletes the file. Used when the activity is destroyed mid-recording. */
-    fun cancel() {
-        val r = recorder ?: return
-        recorder = null
-        try {
-            r.stop()
-        } catch (_: RuntimeException) {
-        }
-        r.release()
-        file?.delete()
-        file = null
+    /**
+     * Stops (if needed) and hands the take back so the caller can hold it for
+     * undo, or null if it isn't a valid, non-empty recording (that file is
+     * deleted). Used for long-press cancel and when the activity is destroyed
+     * mid-recording.
+     */
+    fun cancel(): File? {
+        val out = stop() ?: return null
+        if (out.length() > 0) return out
+        out.delete()
+        return null
     }
 
     companion object {

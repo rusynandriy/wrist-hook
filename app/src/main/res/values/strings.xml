@@ -18,6 +18,7 @@
     <string name="action_close">Close</string>
     <string name="action_send_now">Send now</string>
     <string name="action_allow_mic">Allow microphone</string>
+    <string name="action_undo_cancel">Undo cancel · %1$s</string>
 
     <string name="status_pending_send">Sending…</string>
     <string name="hint_pending_send">Tap to send now\nHold to cancel</string>

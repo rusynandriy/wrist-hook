@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.RemoteInput
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.MediaMetadataRetriever
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.WindowManager
@@ -18,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.wear.input.RemoteInputIntentHelper
 import com.rusyn.wristhook.audio.Recorder
+import com.rusyn.wristhook.data.HeldTakes
 import com.rusyn.wristhook.data.Outbox
 import com.rusyn.wristhook.data.SettingsRepository
 import com.rusyn.wristhook.net.Pairing
@@ -28,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 sealed interface Screen {
@@ -44,6 +47,7 @@ sealed interface Screen {
 class MainActivity : ComponentActivity() {
 
     private lateinit var settings: SettingsRepository
+    private lateinit var heldTakes: HeldTakes
     private val recorder = Recorder()
 
     private var screen by mutableStateOf<Screen>(Screen.Loading)
@@ -58,6 +62,10 @@ class MainActivity : ComponentActivity() {
     private var prefsLoaded = false
     private var amplitudeJob: Job? = null
     private var pendingSendJob: Job? = null
+    // Newest cancelled/discarded take, offered as Undo on the idle screen.
+    private var heldTake by mutableStateOf<HeldTakes.Take?>(null)
+    private var heldTakeSec by mutableStateOf(0)
+    private var heldTakeJob: Job? = null
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -102,6 +110,7 @@ class MainActivity : ComponentActivity() {
         }
 
         settings = SettingsRepository(applicationContext)
+        heldTakes = HeldTakes.forApp(applicationContext)
         // Short-lived app: keep the screen on so recording isn't interrupted by sleep.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -120,6 +129,8 @@ class MainActivity : ComponentActivity() {
         // Deliver anything left over from earlier failed sends (and pull in
         // notes stranded by older builds). Off-main: WorkManager init hits disk.
         lifecycleScope.launch(Dispatchers.IO) { Outbox.schedule(applicationContext) }
+        // Age out old cancelled takes; whatever is left can still be undone.
+        refreshHeldTake(prune = true)
 
         setContent {
             WristHookApp(
@@ -136,8 +147,10 @@ class MainActivity : ComponentActivity() {
                 onSendNow = ::sendNow,
                 onCancelPendingSend = ::cancelPendingSend,
                 onRecordAgain = ::startRecording,
+                undoTakeSec = if (heldTake != null) heldTakeSec else null,
+                onUndoCancel = ::undoCancel,
                 onRetry = ::retryUpload,
-                onDiscard = ::discardAndFinish,
+                onDiscard = ::discard,
                 onOpenSettings = { showSettings = true },
                 onClose = { finish() },
                 onEditUrl = { launchRemoteInput(getString(R.string.label_webhook_url), urlInputLauncher) },
@@ -162,7 +175,8 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         amplitudeJob?.cancel()
         pendingSendJob?.cancel()
-        recorder.cancel()
+        // Killed mid-recording: keep the take for undo if anything valid was captured.
+        recorder.cancel()?.let { heldTakes.hold(it) }
         super.onDestroy()
     }
 
@@ -273,7 +287,7 @@ class MainActivity : ComponentActivity() {
     /** Abort the pending send during the tap-to-cancel window. */
     private fun cancelPendingSend() {
         pendingSendJob?.cancel()
-        lastFile?.delete()
+        lastFile?.let(::holdTake)
         lastFile = null
         Haptics.recordingCancelled(this)
         screen = Screen.Idle
@@ -359,16 +373,87 @@ class MainActivity : ComponentActivity() {
         sendFile(file)
     }
 
-    private fun discardAndFinish() {
-        lastFile?.delete()
+    /**
+     * Discard on the error screen: take the note out of the outbox and hold it,
+     * landing on the idle menu so it can still be undone. With no note to hold
+     * (e.g. a recorder error) this just closes, as before. A worker upload that
+     * is already in flight can't be stopped, same as when Discard deleted it.
+     */
+    private fun discard() {
+        val file = lastFile
         lastFile = null
-        finish()
+        if (file == null || !file.exists()) {
+            finish()
+            return
+        }
+        // Keep the background worker off it while it moves out of the outbox.
+        val claimed = Outbox.claim(file)
+        try {
+            holdTake(file)
+        } finally {
+            if (claimed) Outbox.release(file)
+        }
+        screen = Screen.Idle
     }
 
-    /** Long-press during recording: drop the take and show the idle menu. */
+    /** Idle menu Undo: send the newest held take through the normal send path. */
+    private fun undoCancel() {
+        val take = heldTake ?: return
+        heldTake = null
+        val file = heldTakes.release(take, Outbox.recordingDir(this))
+        if (file == null) {
+            // Aged out while the menu was up; offer the next one, if any.
+            refreshHeldTake()
+            return
+        }
+        lastFile = file
+        sendFile(file)
+    }
+
+    /** Moves a thrown-away take into the holding area and offers it as Undo. */
+    private fun holdTake(file: File) {
+        heldTakes.hold(file) ?: return
+        refreshHeldTake()
+    }
+
+    /**
+     * Re-reads the newest held take (and its length) from disk for the Undo chip.
+     * The latest call wins, so a slow start-up read can't replace a fresh cancel.
+     */
+    private fun refreshHeldTake(prune: Boolean = false) {
+        heldTakeJob?.cancel()
+        heldTakeJob = lifecycleScope.launch {
+            val take = withContext(Dispatchers.IO) {
+                if (prune) heldTakes.prune()
+                heldTakes.newest()
+            }
+            heldTakeSec = if (take != null) durationSec(take.file) else 0
+            heldTake = take
+        }
+    }
+
+    private suspend fun durationSec(file: File): Int = withContext(Dispatchers.IO) {
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(file.absolutePath)
+            val ms = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+            (((ms ?: 0L) + 500) / 1000).toInt()
+        } catch (_: Exception) {
+            0
+        } finally {
+            retriever.release()
+        }
+    }
+
+    /** Long-press during recording: hold the take for undo and show the idle menu. */
     private fun cancelRecording() {
         amplitudeJob?.cancel()
-        recorder.cancel()
+        val take = recorder.cancel()
+        // The app records on launch, so "open, hold" is how you reach the menu.
+        // A take that short is just that gesture: dropping it keeps Undo on the
+        // note you actually cancelled earlier instead of on an empty one.
+        if (SystemClock.elapsedRealtime() - recordingStartedAt < MIN_RECORD_MS) take?.delete()
+        else take?.let(::holdTake)
         lastFile = null
         Haptics.recordingCancelled(this)
         showSettings = false

@@ -75,4 +75,6 @@ dependencies {
 
     // Durable outbox: background retry of failed sends
     implementation("androidx.work:work-runtime-ktx:2.10.1")
+
+    testImplementation("junit:junit:4.13.2")
 }
